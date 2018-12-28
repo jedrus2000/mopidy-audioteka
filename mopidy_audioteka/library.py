@@ -76,7 +76,7 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
         self.albums = {}
         self.artists = {}
 
-        for book in self.backend.audioteka.get_books():
+        for track book in self.backend.audioteka.get_books():
             mopidy_album = self._to_mopidy_album(book)
 
             self.albums[mopidy_album.uri] = mopidy_album
