@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
 import re
@@ -16,7 +17,7 @@ setup(
     version=get_version('mopidy_audioteka/__init__.py'),
     url='https://github.com/jedrus2000/mopidy-audioteka',
     license='Apache License, Version 2.0',
-    author='Andrzej Bargański',
+    author=u'Andrzej Bargański',
     author_email='a.barganski@gmail.com',
     description='Mopidy extension for Audioteka',
     long_description=open('README.rst').read(),
@@ -27,6 +28,7 @@ setup(
         'setuptools',
         'Mopidy >= 1.0',
         'Pykka >= 1.1',
+        'audtekapi >= 0.1.0',
     ],
     entry_points={
         'mopidy.ext': [

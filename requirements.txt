@@ -1,3 +1,5 @@
 # mopidy requires
 #
 # PyGObject==3.30.4
+# dbus-python==1.2.8
+pathlib2==2.3.3

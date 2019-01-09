@@ -1,9 +1,10 @@
 from __future__ import unicode_literals
 
+from pathlib2 import Path
 import logging
 
 from mopidy import backend
-
+from mopidy_audioteka import audioteka
 
 logger = logging.getLogger(__name__)
 
@@ -18,15 +19,16 @@ TRACE_LOG_LEVEL = 5
 class AudiotekaPlaybackProvider(backend.PlaybackProvider):
 
     def __init__(self, *args, **kwargs):
+        self.config = kwargs.pop('config')
         super(AudiotekaPlaybackProvider, self).__init__(*args, **kwargs)
 
-    def translate_uri(self, uri):
-        track_id = uri.rsplit(':')[-1]
+    def translate_uri(self, track_uri):
+        track_uri_decoded = audioteka.track_uri_decode(track_uri)
+        r = self.backend.audioteka.download_track(track_uri_decoded)
+        file_name_path = Path(self.config['core']['cache_dir'], track_uri_decoded['track_no'])
+        open(str(file_name_path), 'wb').write(r.content)
 
-        # TODO
-        #stream_uri = self.backend.session.get_stream_url(
-        #    track_id, quality=quality)
-        stream_uri = 'http://' + track_id
+        stream_uri = 'file:' + str(file_name_path)
 
-        logger.debug('Translated: %s -> %s', uri, stream_uri)
+        logger.debug('Translated: %s -> %s', track_uri, stream_uri)
         return stream_uri

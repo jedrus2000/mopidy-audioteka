@@ -5,6 +5,8 @@ import logging
 from mopidy import backend
 from mopidy.models import Album, Artist, Ref, SearchResult, Track
 
+from mopidy_audioteka.translator import album_to_ref, artist_to_ref, track_to_ref
+
 logger = logging.getLogger(__name__)
 
 
@@ -46,7 +48,7 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
         
         # a single book
         # uri == 'audioteka:album:album_id'
-        if len(parts) == 3 and parts[1] == 'album':
+        if len(parts) == 4 and parts[1] == 'album':
             return self._browse_album(uri)
 
         # authors
@@ -72,67 +74,26 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
             return []
 
     def refresh(self, uri=None):
+        logger.debug('refresh: %s', str(uri))
+
         self.tracks = {}
         self.albums = {}
         self.artists = {}
 
-        for track book in self.backend.audioteka.get_books():
-            mopidy_album = self._to_mopidy_album(book)
-
-            self.albums[mopidy_album.uri] = mopidy_album
-
-            for track in mopidy_album.s
-            self.tracks[mopidy_album.uri] = mopidy_track
-
-
-            # We don't care about the order because we're just using
-            # this as a temporary variable to grab the proper album
-            # artist out of the album.
-            if mopidy_track.album.uri not in album_tracks:
-                album_tracks[mopidy_track.album.uri] = []
-
-            album_tracks[mopidy_track.album.uri].append(mopidy_track)
-
-        # Yes, this is awful. No, I don't have a better solution. Yes,
-        # I'm annoyed at Google for not providing album artist IDs.
-        for album in self.albums.values():
-            artist_found = False
-            for album_artist in album.artists:
-                for track in album_tracks[album.uri]:
-                    for artist in track.artists:
-                        if album_artist.name == artist.name:
-                            artist_found = True
-                            self.artists[artist.uri] = artist
-
-            if not artist_found:
-                for artist in album.artists:
-                    self.artists[artist.uri] = artist
+        for album, tracks in self.backend.audioteka.get_albums():
+            self.artists.update({artist.uri: artist for artist in album.artists})
+            self.albums[album.uri] = album
+            self.tracks.update({track.uri: track for track in tracks})
 
     def search(self, query=None, uris=None, exact=False):
-        if exact:
-            return self._find_exact(query=query, uris=uris)
-
-        lib_tracks, lib_artists, lib_albums = self._search_library(query, uris)
-
-        if query:
-            aa_tracks, aa_artists, aa_albums = self._search(query, uris)
-            for aa_artist in aa_artists:
-                lib_artists.add(aa_artist)
-
-            for aa_album in aa_albums:
-                lib_albums.add(aa_album)
-
-            lib_tracks = set(lib_tracks)
-
-            for aa_track in aa_tracks:
-                lib_tracks.add(aa_track)
-
-        return SearchResult(uri='gmusic:search',
-                            tracks=lib_tracks,
-                            artists=lib_artists,
-                            albums=lib_albums)
+        # TODO
+        return SearchResult(uri='audioteka:search',
+                            tracks=[],
+                            artists=[],
+                            albums=[])
 
     def _browse_tracks(self):
+        logger.debug('browse tracks')
         tracks = list(self.tracks.values())
         tracks.sort(key=lambda ref: ref.name)
         refs = []
@@ -141,6 +102,7 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
         return refs
 
     def _browse_albums(self):
+        logger.debug('browse albums')
         refs = []
         for album in self.albums.values():
             refs.append(album_to_ref(album))
@@ -148,12 +110,14 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
         return refs
 
     def _browse_album(self, uri):
+        logger.debug('browse album, uri: %s', str(uri))
         refs = []
         for track in self._lookup_album(uri):
             refs.append(track_to_ref(track, True))
         return refs
 
     def _browse_artists(self):
+        logger.debug('browse artists')
         refs = []
         for artist in self.artists.values():
             refs.append(artist_to_ref(artist))
@@ -161,13 +125,14 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
         return refs
 
     def _browse_artist(self, uri):
+        logger.debug('browse artist, uri: %s', str(uri))
         refs = []
         for album in self._get_artist_albums(uri):
             refs.append(album_to_ref(album))
             refs.sort(key=lambda ref: ref.name)
         if len(refs) > 0:
             refs.insert(0, Ref.directory(uri=uri + ':all', name='All Tracks'))
-            is_all_access = uri.startswith('gmusic:artist:A')
+            is_all_access = uri.startswith('audioteka:artist:A')
             if is_all_access:
                 refs.insert(1, Ref.directory(uri=uri + ':top', name='Top Tracks'))
             return refs
@@ -175,155 +140,36 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
             # Show all tracks if no album is available
             return self._browse_artist_all_tracks(uri)
 
-    def _browse_artist_all_tracks(self, uri):
-        artist_uri = ':'.join(uri.split(':')[:3])
-        refs = []
-        tracks = self._lookup_artist(artist_uri, True)
-        for track in tracks:
-            refs.append(track_to_ref(track))
-        return refs
-
-    def _browse_artist_top_tracks(self, uri):
-        artist_uri = ':'.join(uri.split(':')[:3])
-        refs = []
-        tracks = self._get_artist_top_tracks(artist_uri)
-        for track in tracks:
-            refs.append(track_to_ref(track))
-        return refs
-
-    def _browse_radio_stations(self, uri):
-        stations = self.backend.session.get_radio_stations(
-            self._radio_stations_count)
-        # create Ref objects
-        refs = []
-        for station in stations:
-            refs.append(Ref.directory(uri='gmusic:radio:' + station['id'],
-                                      name=station['name']))
-        return refs
-
-    def _browse_radio_station(self, uri):
-        station_id = uri.split(':')[2]
-        tracks = self.backend.session.get_station_tracks(
-            station_id, self._radio_tracks_count)
-
-        # create Ref objects
-        refs = []
-        for track in tracks:
-            mopidy_track = self._to_mopidy_track(track)
-            self.aa_tracks[mopidy_track.uri] = mopidy_track
-            refs.append(track_to_ref(mopidy_track))
-        return refs
-
-
     def _lookup_track(self, uri):
-        is_all_access = uri.startswith('gmusic:track:T')
-
+        logger.debug('lookup track, uri: %s', str(uri))
         try:
             return [self.tracks[uri]]
         except KeyError:
             logger.debug('Track not a library track %r', uri)
-            pass
-
-        if is_all_access and self.all_access:
-            track = self.aa_tracks.get(uri)
-            if track:
-                return [track]
-            song = self.backend.session.get_track_info(uri.split(':')[2])
-            if song is None:
-                logger.warning('There is no song %r', uri)
-                return []
-            if 'artistId' not in song:
-                logger.warning('Failed to lookup %r', uri)
-                return []
-            mopidy_track = self._to_mopidy_track(song)
-            self.aa_tracks[mopidy_track.uri] = mopidy_track
-            return [mopidy_track]
-        else:
             return []
 
     def _lookup_album(self, uri):
-        is_all_access = uri.startswith('gmusic:album:B')
-        if self.all_access and is_all_access:
-            tracks = self.aa_albums.get(uri)
-            if tracks:
-                return tracks
-            album = self.backend.session.get_album_info(
-                uri.split(':')[2], include_tracks=True)
-            if album and album.get('tracks'):
-                tracks = [self._to_mopidy_track(track)
-                          for track in album['tracks']]
-                for track in tracks:
-                    self.aa_tracks[track.uri] = track
-                tracks = sorted(tracks, key=lambda t: (t.disc_no, t.track_no))
-                self.aa_albums[uri] = tracks
-                return tracks
-
-            logger.warning('Failed to lookup all access album %r: %r',
-                           uri, album)
-
-        # Even if the album has an all access ID, we need to look it
-        # up here (as a fallback) because purchased tracks can have a
-        # store ID, but only show up in your library.
+        logger.debug('lookup album, uri: %s', str(uri))
         try:
             album = self.albums[uri]
         except KeyError:
             logger.debug('Failed to lookup %r', uri)
             return []
 
-        tracks = self._find_exact(
-            dict(album=album.name,
-                 artist=[artist.name for artist in album.artists],
-                 date=album.date)).tracks
-        return sorted(tracks, key=lambda t: (t.disc_no, t.track_no))
-
-    def _get_artist_top_tracks(self, uri):
-        is_all_access = uri.startswith('gmusic:artist:A')
-        artist_id = uri.split(':')[2]
-
-        if not is_all_access:
-            logger.debug("Top Tracks not available for non-all-access artists")
-            return []
-
-        artist_info = self.backend.session.get_artist_info(artist_id,
-                                                           include_albums=False,
-                                                           max_top_tracks=self._top_tracks_count,
-                                                           max_rel_artist=0)
-        top_tracks = []
-
-        for track_dict in artist_info['topTracks']:
-            top_tracks.append(self._to_mopidy_track(track_dict))
-
-        return top_tracks
+        return sorted([track for track in self.tracks.values() if track.album == album],
+                      key=lambda t: t.track_no)
+        # tracks = self._find_exact(
+        #    dict(album=album.name,
+        #         artist=[artist.name for artist in album.artists],
+        #         date=album.date)).tracks
+        # return sorted(tracks, key=lambda t: (t.disc_no, t.track_no))
 
     def _get_artist_albums(self, uri):
-        is_all_access = uri.startswith('gmusic:artist:A')
+        logger.debug('0 albums available for artist %r', uri)
+        return []
 
-        artist_id = uri.split(':')[2]
-        if is_all_access:
-            # all access
-            artist_infos = self.backend.session.get_artist_info(
-                artist_id, max_top_tracks=0, max_rel_artist=0)
-            if artist_infos is None or 'albums' not in artist_infos:
-                return []
-            albums = []
-            for album in artist_infos['albums']:
-                albums.append(
-                    self._aa_search_album_to_mopidy_album({'album': album}))
-            return albums
-        elif self.all_access and artist_id in self.aa_artists:
-            albums = self._get_artist_albums(
-                'gmusic:artist:%s' % self.aa_artists[artist_id])
-            if len(albums) > 0:
-                return albums
-            # else fall back to non aa albums
-        if uri in self.artists:
-            artist = self.artists[uri]
-            return [album for album in self.albums.values()
-                    if artist in album.artists]
-        else:
-            logger.debug('0 albums available for artist %r', uri)
-            return []
 
+    """
     def _lookup_artist(self, uri, exact_match=False):
         def sorter(track):
             return (
@@ -358,124 +204,25 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
         if exact_match:
             tracks = filter(lambda t: artist in t.artists, tracks)
         return sorted(tracks, key=sorter)
+    """
 
-
+    """
     def _find_exact(self, query=None, uris=None):
         # Find exact can only be done on gmusic library,
         # since one can't filter all access searches
         lib_tracks, lib_artists, lib_albums = self._search_library(query, uris)
 
-        return SearchResult(uri='gmusic:search',
+        return SearchResult(uri='audioteka:search',
                             tracks=lib_tracks,
                             artists=lib_artists,
                             albums=lib_albums)
 
     def _search(self, query=None, uris=None):
-        for (field, values) in query.iteritems():
-            if not hasattr(values, '__iter__'):
-                values = [values]
-
-            # Since gmusic does not support search filters, just search for the
-            # first 'searchable' filter
-            if field in [
-                'track_name', 'album', 'artist', 'albumartist', 'any']:
-                logger.info(
-                    'Searching Google Play Music for: %s',
-                    values[0])
-                res = self.backend.session.search(values[0], max_results=50)
-                if res is None:
-                    return [], [], []
-
-                albums = [
-                    self._aa_search_album_to_mopidy_album(album_res)
-                    for album_res in res['album_hits']]
-                artists = [
-                    self._aa_search_artist_to_mopidy_artist(artist_res)
-                    for artist_res in res['artist_hits']]
-                tracks = [
-                    self._aa_search_track_to_mopidy_track(track_res)
-                    for track_res in res['song_hits']]
-
-                return tracks, artists, albums
-
         return [], [], []
 
     def _search_library(self, query=None, uris=None):
-        if query is None:
-            query = {}
-        self._validate_query(query)
-        result_tracks = self.tracks.values()
-
-        for (field, values) in query.iteritems():
-            if not hasattr(values, '__iter__'):
-                values = [values]
-            # FIXME this is bound to be slow for large libraries
-            for value in values:
-                if field == 'track_no':
-                    q = self._convert_to_int(value)
-                else:
-                    q = value.strip().lower()
-
-                def uri_filter(track):
-                    return q in track.uri.lower()
-
-                def track_name_filter(track):
-                    return q in track.name.lower()
-
-                def album_filter(track):
-                    return q in getattr(track, 'album', Album()).name.lower()
-
-                def artist_filter(track):
-                    return (
-                            any(q in a.name.lower() for a in track.artists) or
-                            albumartist_filter(track))
-
-                def albumartist_filter(track):
-                    album_artists = getattr(track, 'album', Album()).artists
-                    return any(q in a.name.lower() for a in album_artists)
-
-                def track_no_filter(track):
-                    return track.track_no == q
-
-                def date_filter(track):
-                    return track.date and track.date.startswith(q)
-
-                def any_filter(track):
-                    return any([
-                        uri_filter(track),
-                        track_name_filter(track),
-                        album_filter(track),
-                        artist_filter(track),
-                        albumartist_filter(track),
-                        date_filter(track),
-                    ])
-
-                if field == 'uri':
-                    result_tracks = filter(uri_filter, result_tracks)
-                elif field == 'track_name':
-                    result_tracks = filter(track_name_filter, result_tracks)
-                elif field == 'album':
-                    result_tracks = filter(album_filter, result_tracks)
-                elif field == 'artist':
-                    result_tracks = filter(artist_filter, result_tracks)
-                elif field == 'albumartist':
-                    result_tracks = filter(albumartist_filter, result_tracks)
-                elif field == 'track_no':
-                    result_tracks = filter(track_no_filter, result_tracks)
-                elif field == 'date':
-                    result_tracks = filter(date_filter, result_tracks)
-                elif field == 'any':
-                    result_tracks = filter(any_filter, result_tracks)
-                else:
-                    raise LookupError('Invalid lookup field: %s' % field)
-
-        result_artists = set()
-        result_albums = set()
-        for track in result_tracks:
-            result_artists |= track.artists
-            result_albums.add(track.album)
-
-        return result_tracks, result_artists, result_albums
+        return [], [], []
+    """
 
     def _validate_query(self, query):
         for (_, values) in query.iteritems():
@@ -539,6 +286,7 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
         uri = 'gmusic:artist:' + create_id(name)
         return Artist(uri=uri, name=name)
 
+    """
     def _aa_search_track_to_mopidy_track(self, search_track):
         track = search_track['track']
 
@@ -598,3 +346,4 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
             return int(string)
         except ValueError:
             return object()
+    """

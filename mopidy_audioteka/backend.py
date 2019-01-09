@@ -21,19 +21,15 @@ class AudiotekaBackend(pykka.ThreadingActor, backend.Backend):
 
         self.config = config
         self.audio = audio
-        self.audioteka = audioteka.Audioteka(config['audioteka']['username'], config['audioteka']['password'])
-
-        #self._actor_proxy = None
-        #self._session = None
-        #self._event_loop = None
-        #self._bitrate = None
-        #self._web_client = None
+        self.audioteka = audioteka.Audioteka(backend=self)
 
         self.library = library.AudiotekaLibraryProvider(backend=self)
         self.playback = playback.AudiotekaPlaybackProvider(
-            audio=audio, backend=self)
-        #if config['spotify']['allow_playlists']:
-        #    self.playlists = playlists.SpotifyPlaylistsProvider(backend=self)
-        #else:
+            audio=audio, backend=self, config=config)
+
         self.playlists = None
         self.uri_schemes = ['audioteka']
+
+    def on_start(self):
+        logger.info('Start refreshing Audioteka')
+        self.library.refresh()
