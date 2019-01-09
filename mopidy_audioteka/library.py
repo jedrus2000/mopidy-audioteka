@@ -26,7 +26,7 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
         self._root = [
             Ref.directory(uri='audioteka:album', name='Books'),
             Ref.directory(uri='audioteka:artist', name='Authors/Readers'),
-            Ref.directory(uri='audioteka:track', name='Chapters')
+            # Ref.directory(uri='audioteka:track', name='Chapters')
         ]
 
     def browse(self, uri):
@@ -87,6 +87,8 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
 
     def search(self, query=None, uris=None, exact=False):
         # TODO
+        logger.debug('search - query=%s, uris=%s, exact=%s ' % (query, uris, exact) )
+        # search - query={u'any': [u'test']}, uris=[u'audioteka:album'], exact=False
         return SearchResult(uri='audioteka:search',
                             tracks=[],
                             artists=[],
@@ -168,6 +170,9 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
         logger.debug('0 albums available for artist %r', uri)
         return []
 
+    def _lookup_artist(self, uri, exact_match=False):
+        logger.debug('_lookup_artist, uri: %r', uri)
+        return []
 
     """
     def _lookup_artist(self, uri, exact_match=False):
@@ -204,9 +209,7 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
         if exact_match:
             tracks = filter(lambda t: artist in t.artists, tracks)
         return sorted(tracks, key=sorter)
-    """
-
-    """
+   
     def _find_exact(self, query=None, uris=None):
         # Find exact can only be done on gmusic library,
         # since one can't filter all access searches
@@ -222,7 +225,6 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
 
     def _search_library(self, query=None, uris=None):
         return [], [], []
-    """
 
     def _validate_query(self, query):
         for (_, values) in query.iteritems():
@@ -286,7 +288,6 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
         uri = 'gmusic:artist:' + create_id(name)
         return Artist(uri=uri, name=name)
 
-    """
     def _aa_search_track_to_mopidy_track(self, search_track):
         track = search_track['track']
 
