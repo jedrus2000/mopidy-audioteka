@@ -52,7 +52,6 @@ def get_images(song):
         return [art_ref['url']
                 for art_ref in song['albumArtRef']
                 if 'url' in art_ref]
-
     return []
 
 

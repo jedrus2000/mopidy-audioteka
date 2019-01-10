@@ -72,7 +72,7 @@ class Audioteka:
     def get_artists(self, book):
         artists_names = list()
         artists_names += book['Author'].split(';')
-        artists_names += book['Reader'].split(';')
+        # artists_names += book['Reader'].split(';')
         return [Artist(uri='audioteka:artist:' + create_id(name), name=name) for name in artists_names]
 
     def download_track(self, track):
