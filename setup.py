@@ -19,7 +19,7 @@ setup(
     license='Apache License, Version 2.0',
     author=u'Andrzej Bargański',
     author_email='a.barganski@gmail.com',
-    description='Mopidy extension for Audioteka',
+    description='Mopidy backend extension for Audioteka',
     long_description=open('README.rst').read(),
     packages=find_packages(exclude=['tests', 'tests.*']),
     zip_safe=False,
@@ -28,7 +28,7 @@ setup(
         'setuptools',
         'Mopidy >= 1.0',
         'Pykka >= 1.1',
-        'audtekapi >= 0.1.0',
+        'audtekapi >= 0.2.0',
     ],
     entry_points={
         'mopidy.ext': [

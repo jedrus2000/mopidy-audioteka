@@ -14,7 +14,8 @@ Mopidy-Audioteka
    :target: https://coveralls.io/r/jedrus2000/mopidy-audioteka
    :alt: Test coverage
 
-Mopidy extension for Audioteka
+
+`Mopidy <https://www.mopidy.com/>`_ extension (non-official) for `Audioteka <https://audioteka.com/>`_ audiobooks service.
 
 
 Installation
@@ -35,7 +36,9 @@ Before starting Mopidy, you must add configuration for
 Mopidy-Audioteka to your Mopidy configuration file::
 
     [audioteka]
-    # TODO: Add example of extension config
+    enabled = true
+    username = account name at Audioteka
+    password = password for above account name
 
 
 Project resources
@@ -48,15 +51,15 @@ Project resources
 Credits
 =======
 
-- Original author: `Andrzej Bargański <https://github.com/jedrus2000`__
-- Current maintainer: `Andrzej Bargański <https://github.com/jedrus2000`__
+- Original author: `Andrzej Bargański <https://github.com/jedrus2000>`_
+- Current maintainer: `Andrzej Bargański <https://github.com/jedrus2000>`_
 - `Contributors <https://github.com/jedrus2000/mopidy-audioteka/graphs/contributors>`_
 
 
 Changelog
 =========
 
-v0.1.0 (UNRELEASED)
+v0.1.0 (2019-01-17)
 ----------------------------------------
 
 - Initial release.

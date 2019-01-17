@@ -8,28 +8,31 @@ import time
 
 import audtekapi as api
 from mopidy import httpclient
-from mopidy.models import Album, Artist, Ref, SearchResult, Track
+from mopidy.models import Album, Artist, Track, fields
 from mopidy_audioteka.translator import create_id
 
 logger = logging.getLogger(__name__)
 
 
 class Audioteka:
-    def __init__(self, backend):
-        self._backend = backend
+    def __init__(self, proxy, username, password):
         self._session = requests.Session()
-        proxy = httpclient.format_proxy(backend.config['proxy'])
-        self._session.proxies.update({'http': proxy, 'https': proxy})
+        if proxy:
+            proxy_formatted = httpclient.format_proxy(proxy)
+            self._session.proxies.update({'http': proxy_formatted, 'https': proxy_formatted})
+            self._session.verify = False
 
-        self._credentials = api.login(
-            backend.config['audioteka']['username'],
-            backend.config['audioteka']['password'], self._session)
+        self._credentials = api.login(username, password, self._session)
         self._download_server_address = ''
         self._download_url_footer = ''
 
-    def get_albums(self, with_tracks=True):
+    def get_albums_with_tracks(self, no_of_cached=0):
         books = api.get_shelf( self._credentials, self._session)
         logger.debug('books shelf data: %s', str(books))
+        if no_of_cached == books['ShelfItemsCount']:
+            logger.debug('No of cached books same as found online. Skipping retrieving more data.')
+            return
+
         self._download_url_footer = books['Footer']
         self._download_server_address = books['ServerAddress']
 
@@ -38,21 +41,21 @@ class Audioteka:
             album = Album(
                 uri=album_uri_encode(book['LineItemId'], book['OrderTrackingNumber']),
                 name=book['Title'],
-                artists=self.get_artists(book),
+                artists=self._get_artists(book),
                 num_tracks=len(chapters),
                 images=[book['BigPictureLink']],
                 num_discs=1,
                 date=api.epoch_to_datetime(book['ProductDateAdd']).strftime('%Y-%m-%d'))
-            tracks = self.get_tracks(album, chapters)
+            tracks = self._get_tracks(album, chapters)
             yield album, tracks
 
-    def get_tracks(self, album, chapters=None):
+    def _get_tracks(self, album, chapters=None):
         album_ids = album.uri.split(':')
         if not chapters:
             chapters = self._get_chapters(album_ids[2], album_ids[3])
         try:
             return [
-                Track(
+                AudiotekaTrack(
                     uri=track_uri_encode(album_ids[2], album_ids[3],
                                          chapter['Track'], chapter['Link']),
                     name=chapter['ChapterTitle'],
@@ -63,19 +66,20 @@ class Audioteka:
                     disc_no=1,
                     date=album.date,
                     length=chapter['Length'],
+                    file_size=chapter['Size'],
                     last_modified=int(time.mktime(datetime.now().timetuple()) * 1000)
                 ) for chapter in chapters
             ]
         except Exception as e:
             logger.error(str(e)+' Album IDs: %s, Chapters: %s', str(album_ids), str(chapters))
 
-    def get_artists(self, book):
+    def _get_artists(self, book):
         artists_names = list()
         artists_names += book['Author'].split(';')
         # artists_names += book['Reader'].split(';')
         return [Artist(uri='audioteka:artist:' + create_id(name), name=name) for name in artists_names]
 
-    def download_track(self, track):
+    def download_track(self, track, stream=False):
         if isinstance(track, dict):
             track_uri_decoded = track
         else:
@@ -87,6 +91,7 @@ class Audioteka:
                                     self._download_url_footer,
                                     track_uri_decoded['track_file_name'],
                                     self._credentials,
+                                    stream,
                                     self._session)
 
     def _get_chapters(self, line_item_id, order_tracking_number):
@@ -109,3 +114,8 @@ def track_uri_encode(line_item_id, tracking_number, track_no, track_file_name):
 
 def album_uri_encode(line_item_id, tracking_number):
     return 'audioteka:album:{0}:{1}'.format(line_item_id, tracking_number)
+
+
+class AudiotekaTrack(Track):
+    #: The track file size in bytes. Read-only.
+    file_size = fields.Integer(min=0)

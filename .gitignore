@@ -6,5 +6,5 @@
 MANIFEST
 build/
 dist/
-/.idea/
-/venv/
+*.log*
+

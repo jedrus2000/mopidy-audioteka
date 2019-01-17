@@ -1,13 +1,26 @@
+# -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
 import logging
-
+import time
 from mopidy import backend
 from mopidy.models import Album, Artist, Ref, SearchResult, Track
 
 from mopidy_audioteka.translator import album_to_ref, artist_to_ref, track_to_ref
 
 logger = logging.getLogger(__name__)
+
+
+def check_refresh(func):
+    def func_wrapper(self, *args, **kwargs):
+        # print repr(self)
+        if (time.time() - self._last_refresh) > 60:
+            logger.debug('Executing refresh')
+            self.refresh(self)
+        else:
+            logger.debug('Not executing refresh')
+        return func(self, *args, **kwargs)
+    return func_wrapper
 
 
 class AudiotekaLibraryProvider(backend.LibraryProvider):
@@ -27,7 +40,10 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
             Ref.directory(uri='audioteka:album', name='Books'),
             Ref.directory(uri='audioteka:artist', name='Authors'),
         ]
+        self._last_refresh = 0
 
+
+    @check_refresh
     def browse(self, uri):
         logger.debug('browse: %s', str(uri))
         if not uri:
@@ -62,6 +78,7 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
         logger.debug('Unknown uri for browse request: %s', uri)
         return []
 
+    @check_refresh
     def lookup(self, uri):
         logger.debug('lookup: %s', str(uri))
         if uri.startswith('audioteka:track:'):
@@ -76,23 +93,26 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
     def refresh(self, uri=None):
         logger.debug('refresh: %s', str(uri))
 
+        self._last_refresh = time.time()
+
         self.tracks = {}
         self.albums = {}
         self.artists = {}
 
-        for album, tracks in self.backend.audioteka.get_albums():
+        for album, tracks in self.backend.audioteka.get_albums_with_tracks(len(self.albums)):
             self.artists.update({artist.uri: artist for artist in album.artists})
             self.albums[album.uri] = album
             self.tracks.update({track.uri: track for track in tracks})
 
-    def search(self, query=None, uris=None, exact=False):
-        # TODO
-        logger.debug('search: query=%s, uris=%s, exact=%s ' % (query, uris, exact) )
-        # search - query={u'any': [u'test']}, uris=[u'audioteka:album'], exact=False
-        return SearchResult(uri='audioteka:search',
-                            tracks=[],
-                            artists=[],
-                            albums=[])
+    # TODO search ?
+    #@check_refresh
+    #def search(self, query=None, uris=None, exact=False):
+    #    logger.debug('search: query=%s, uris=%s, exact=%s ' % (query, uris, exact) )
+    #    # search - query={u'any': [u'test']}, uris=[u'audioteka:album'], exact=False
+    #    return SearchResult(uri='audioteka:search',
+    #                        tracks=[],
+    #                        artists=[],
+    #                        albums=[])
 
     def _browse_tracks(self):
         logger.debug('browse tracks')
