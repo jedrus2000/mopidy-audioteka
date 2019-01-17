@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 class Audioteka:
     def __init__(self, proxy, username, password):
         self._session = requests.Session()
-        if proxy:
-            proxy_formatted = httpclient.format_proxy(proxy)
+        proxy_formatted = httpclient.format_proxy(proxy)
+        if proxy_formatted:
             self._session.proxies.update({'http': proxy_formatted, 'https': proxy_formatted})
             self._session.verify = False
 
