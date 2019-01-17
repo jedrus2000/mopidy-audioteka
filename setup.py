@@ -29,6 +29,7 @@ setup(
         'Mopidy >= 1.0',
         'Pykka >= 1.1',
         'audtekapi >= 0.2.0',
+        'pathlib2 >=2.3.3'
     ],
     entry_points={
         'mopidy.ext': [
