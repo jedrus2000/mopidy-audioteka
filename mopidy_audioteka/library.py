@@ -95,10 +95,6 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
 
         self._last_refresh = time.time()
 
-        self.tracks = {}
-        self.albums = {}
-        self.artists = {}
-
         for album, tracks in self.backend.audioteka.get_albums_with_tracks(len(self.albums)):
             self.artists.update({artist.uri: artist for artist in album.artists})
             self.albums[album.uri] = album

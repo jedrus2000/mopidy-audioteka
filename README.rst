@@ -59,6 +59,12 @@ Credits
 Changelog
 =========
 
+v0.1.3 (2019-01-18)
+----------------------------------------
+
+- Removed stupid logical bug which forced refreshing book-shelf in all cases.
+
+
 v0.1.2 (2019-01-17)
 ----------------------------------------
 
