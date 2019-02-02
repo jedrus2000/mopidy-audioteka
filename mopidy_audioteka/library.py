@@ -4,7 +4,8 @@ from __future__ import unicode_literals
 import logging
 import time
 from mopidy import backend
-from mopidy.models import Album, Artist, Ref, SearchResult, Track
+from mopidy.models import Ref
+from mopidy_audioteka.exceptions import AudiotekaError
 
 from mopidy_audioteka.translator import album_to_ref, artist_to_ref, track_to_ref
 
@@ -93,12 +94,14 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
     def refresh(self, uri=None):
         logger.debug('refresh: %s', str(uri))
 
-        self._last_refresh = time.time()
-
-        for album, tracks in self.backend.audioteka.get_albums_with_tracks(len(self.albums)):
-            self.artists.update({artist.uri: artist for artist in album.artists})
-            self.albums[album.uri] = album
-            self.tracks.update({track.uri: track for track in tracks})
+        try:
+            for album, tracks in self.backend.audioteka.get_albums_with_tracks(len(self.albums)):
+                self.artists.update({artist.uri: artist for artist in album.artists})
+                self.albums[album.uri] = album
+                self.tracks.update({track.uri: track for track in tracks})
+            self._last_refresh = time.time()
+        except AudiotekaError, e:
+            logger.error('refresh: %s' % str(e))
 
     # TODO search ?
     #@check_refresh
