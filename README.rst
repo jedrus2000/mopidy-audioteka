@@ -59,6 +59,11 @@ Credits
 Changelog
 =========
 
+v0.1.5 (2019-02-02)
+----------------------------------------
+- Guarding exceptions: one missing guard
+
+
 v0.1.4 (2019-02-02)
 ----------------------------------------
 - Guarding exceptions, related to issue #1

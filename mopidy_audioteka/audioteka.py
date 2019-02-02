@@ -28,6 +28,7 @@ class Audioteka:
         self._download_server_address = ''
         self._download_url_footer = ''
 
+    @exception_guard
     def _login(self):
         self._login_result = api.login(self._username, self._password, self._session)
 
