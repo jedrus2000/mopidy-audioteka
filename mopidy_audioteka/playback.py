@@ -19,9 +19,21 @@ class AudiotekaPlaybackProvider(backend.PlaybackProvider):
     def __init__(self, *args, **kwargs):
         self._cache_dir = kwargs.pop('cache_dir')
         super(AudiotekaPlaybackProvider, self).__init__(*args, **kwargs)
+        self.audio.set_on_source_setup_callback(self._on_source_setup).get()
+
+    def _on_source_setup(self, source):
+        logger.debug(
+            'Audteka source-setup : source=%s', source.get_factory().get_name() )
+        source.set_property('user-id', 'a.barganski@gmail.com')
+        source.set_property('user-pw', 'DA324CCC01C85B65761AE0809E6EDC02379EE87EB5D7B8C05FFAE64716745FC40A0B3B25')
+
 
     def translate_uri(self, track_uri):
         track_uri_decoded = audioteka.track_uri_decode(track_uri)
+
+        return "http://mediaserver5.audioteka.pl/GetFileRouter.ashx?TrackingNumber=1408739179" \
+               "&LineItemId=a9a63579-bdc2-4b4f-b810-63fffa0e42db&FileName=05+Lod+2.mp3&No=0&daa=true&httpStatus=true&regen=true"
+
         track = self.backend.library.tracks.get(track_uri)
         if not track:
             logger.error("Can't find Track for uri: %s" % track_uri)
