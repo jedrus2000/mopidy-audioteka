@@ -100,7 +100,7 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
                 self.albums[album.uri] = album
                 self.tracks.update({track.uri: track for track in tracks})
             self._last_refresh = time.time()
-        except AudiotekaError, e:
+        except AudiotekaError as e:
             logger.error('refresh: %s' % str(e))
 
     # TODO search ?
