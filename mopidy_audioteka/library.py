@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 import logging
 import time
 from mopidy import backend
-from mopidy.models import Ref
+from mopidy.models import Ref, Image
 from mopidy_audioteka.exceptions import AudiotekaError
 
 from mopidy_audioteka.translator import album_to_ref, artist_to_ref, track_to_ref
@@ -34,6 +34,7 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
         # in our library.
         self.tracks = {}
         self.albums = {}
+        self.albums_img = {}
         self.artists = {}
 
         # Setup the root of library browsing.
@@ -95,13 +96,24 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
         logger.debug('refresh: %s', str(uri))
 
         try:
-            for album, tracks in self.backend.audioteka.get_albums_with_tracks(len(self.albums)):
+            for album, tracks, img in self.backend.audioteka.get_albums_with_tracks(len(self.albums)):
                 self.artists.update({artist.uri: artist for artist in album.artists})
                 self.albums[album.uri] = album
+                self.albums_img[album.uri] = img
                 self.tracks.update({track.uri: track for track in tracks})
             self._last_refresh = time.time()
-        except AudiotekaError, e:
+        except AudiotekaError as e:
             logger.error('refresh: %s' % str(e))
+
+    def get_images(self, uris):
+        result = {}
+        for uri in uris:
+            images = None
+            if uri.startswith('audioteka:album:'):
+                images = [Image(uri=self.albums_img[uri])]
+            result[uri] = images or ()
+
+        return result
 
     # TODO search ?
     #@check_refresh

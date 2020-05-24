@@ -56,11 +56,10 @@ class Audioteka:
                 name=book['Title'],
                 artists=self._get_artists(book),
                 num_tracks=len(chapters),
-                images=[book['BigPictureLink']],
                 num_discs=1,
                 date=api.epoch_to_datetime(book['ProductDateAdd']).strftime('%Y-%m-%d'))
             tracks = self._get_tracks(album, chapters)
-            yield album, tracks
+            yield album, tracks, book['BigPictureLink']
 
     def _get_tracks(self, album, chapters=None):
         album_ids = album.uri.split(':')
