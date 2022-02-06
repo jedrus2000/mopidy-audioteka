@@ -27,10 +27,10 @@ class Audioteka:
     def get_albums_with_tracks(self, no_of_cached=0):
         retrieved_audiobooks: int = 0
         _raw = self._api.get_shelf()
-        if no_of_cached == 1: # _raw['total']:
+        if no_of_cached == _raw['total']:
             logger.debug('No of cached books same as found online. Skipping retrieving more data.')
             return
-        while retrieved_audiobooks < 1: # _raw['total']:
+        while retrieved_audiobooks < _raw['total']:
             for _product in _raw['_embedded']['app:product']:
                 retrieved_audiobooks += 1
                 chapters = self._get_chapters(_product['id'])
