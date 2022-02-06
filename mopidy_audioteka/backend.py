@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import unicode_literals
-
 import logging
 import pykka
 
@@ -23,7 +20,9 @@ class AudiotekaBackend(pykka.ThreadingActor, backend.Backend):
         self.audio = audio
 
         self.audioteka = audioteka.Audioteka(
-            config['proxy'], config['audioteka']['username'], config['audioteka']['password']
+            config['proxy'], config['audioteka']['username'],
+            config['audioteka']['password'],
+            config['audioteka']['device_id']
         )
         self.library = library.AudiotekaLibraryProvider(backend=self)
         self.playback = playback.AudiotekaPlaybackProvider(
