@@ -68,6 +68,10 @@ Credits
 Changelog
 =========
 
+v0.3.1 (2022-02-06)
+----------------------------------------
+- remove testing artefacts
+
 v0.3.0 (2022-02-06)
 ----------------------------------------
 - refactoring to work with Python >=3.7 and Mopidy 3.x
