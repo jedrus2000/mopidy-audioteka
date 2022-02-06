@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import unicode_literals
-
 import logging
 import time
 from mopidy import backend
@@ -62,10 +59,10 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
         # books
         if uri == 'audioteka:album':
             return self._browse_albums()
-        
+
         # a single book
         # uri == 'audioteka:album:album_id'
-        if len(parts) == 4 and parts[1] == 'album':
+        if len(parts) == 3 and parts[1] == 'album':
             return self._browse_album(uri)
 
         # authors
@@ -99,20 +96,19 @@ class AudiotekaLibraryProvider(backend.LibraryProvider):
             for album, tracks, img in self.backend.audioteka.get_albums_with_tracks(len(self.albums)):
                 self.artists.update({artist.uri: artist for artist in album.artists})
                 self.albums[album.uri] = album
-                self.albums_img[album.uri] = img
+                self.albums_img[album.uri.split(':')[2]] = img
                 self.tracks.update({track.uri: track for track in tracks})
             self._last_refresh = time.time()
         except AudiotekaError as e:
             logger.error('refresh: %s' % str(e))
 
     def get_images(self, uris):
+        logger.debug(f"get_images uris: {uris}")
         result = {}
         for uri in uris:
-            images = None
-            if uri.startswith('audioteka:album:'):
-                images = [Image(uri=self.albums_img[uri])]
-            result[uri] = images or ()
-
+            img = self.albums_img.get(uri.split(':')[2], None)
+            result[uri] = [Image(uri=img)] if img else ()
+            logger.debug(f"get_images uri: {uri}, image: {result[uri]}")
         return result
 
     # TODO search ?

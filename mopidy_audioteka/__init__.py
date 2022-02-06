@@ -1,13 +1,10 @@
-# -*- coding: utf-8 -*-
-from __future__ import unicode_literals
-
 import logging
 import os
 
 from mopidy import config, ext
 
 
-__version__ = '0.1.5'
+__version__ = '0.3.0'
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +22,7 @@ class Extension(ext.Extension):
         schema = super(Extension, self).get_config_schema()
         schema['username'] = config.String()
         schema['password'] = config.Secret()
+        schema['device_id'] = config.String()
         return schema
 
     def setup(self, registry):

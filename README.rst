@@ -39,6 +39,15 @@ Mopidy-Audioteka to your Mopidy configuration file::
     enabled = true
     username = account name at Audioteka
     password = password for above account name
+    device_id = YOUR_DEVICE_ID
+
+YOUR_DEVICE_ID is your Audioteka device ID. You can generate it::
+
+    bash> python
+    Python 3.9.1
+    >>> import uuid
+    >>> str(uuid.uuid4())
+    'ca358b48-8401-4033-8289-9e50045ac83a'
 
 
 Project resources
@@ -58,6 +67,11 @@ Credits
 
 Changelog
 =========
+
+v0.3.0 (2022-02-06)
+----------------------------------------
+- refactoring to work with Python >=3.7 and Mopidy 3.x
+- adding support for new Audioteka API
 
 v0.1.5 (2019-02-02)
 ----------------------------------------
